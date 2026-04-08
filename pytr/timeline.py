@@ -1,5 +1,7 @@
 import json
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .api import TradeRepublicError
 from .utils import get_logger, preview
@@ -36,7 +38,7 @@ class Timeline:
     def __init__(
         self,
         tr,
-        output_path,
+        output_path: Optional[Path] = None,
         not_before=float(0),
         not_after=float("inf"),
         store_event_database=True,
@@ -59,19 +61,24 @@ class Timeline:
         self.event_callback = event_callback
         self.log = get_logger(__name__)
         self.dl_done = False
-        self.error_counts = {}
+        self.error_counts: Dict[str, int] = {}
         self.num_timelines = 0
         self.all_detail = 0
         self.requested_detail = 0
         self.received_detail = 0
         self.skipped_detail = 0
         self.detail_digits = 0
-        self.timeline_transactions = {}
-        self.timeline_activities = {}
-        self.timeline_details = {}
-        self.events = []
+        self.timeline_transactions: Dict[str, Dict[str, Any]] = {}
+        self.timeline_activities: Dict[str, Dict[str, Any]] = {}
+        self.timeline_details: Dict[str, Dict[str, Any]] = {}
+        self.events: List[Dict[str, Any]] = []
 
-        output_path.mkdir(parents=True, exist_ok=True)
+        if output_path is not None:
+            output_path.mkdir(parents=True, exist_ok=True)
+        else:
+            if self.dump_raw_data:
+                self.log.warning("dump_raw_data=True ignored because output_path is None")
+                self.dump_raw_data = False
 
     async def tl_loop(self):
         await self.get_next_timeline_transactions(None)
@@ -286,8 +293,8 @@ class Timeline:
 
             # read old events from all_events.json
             old_events = []
-            all_events_path = self.output_path / "all_events.json"
-            if all_events_path.exists():
+            all_events_path = self.output_path / "all_events.json" if self.output_path is not None else None
+            if all_events_path is not None and all_events_path.exists():
                 self.log.info("Reading event database...")
                 with open(all_events_path, "r", encoding="utf-8") as f:
                     old_events = json.load(f)
@@ -353,7 +360,7 @@ class Timeline:
             self.log.info("Sorting events...")
             self.events.sort(key=lambda value: datetime.fromisoformat(value["timestamp"][:19]))
 
-            if self.fetch_from_tr:
+            if self.fetch_from_tr and all_events_path is not None:
                 self.log.info(f"Writing {all_events_path}...")
                 with open(all_events_path, "w", encoding="utf-8") as f:
                     json.dump(self.events, f, ensure_ascii=False, indent=2, default=str)

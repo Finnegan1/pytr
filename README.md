@@ -92,6 +92,62 @@ Options:
 ```
 <!-- end runcmd -->
 
+## Using pytr as an SDK
+
+You can also use pytr as a Python library from another project. Install it from
+git:
+
+```sh
+uv add git+https://github.com/Finnegan1/pytr
+```
+
+Or, from PyPI:
+
+```sh
+uv add pytr
+```
+
+Minimal example — log in via web, fetch the timeline, export transactions:
+
+```python
+import asyncio
+
+from pytr import Timeline, TransactionExporter, login
+
+
+def ask_mfa() -> str:
+    # Replace with however your app collects the 4-digit MFA code.
+    return input("Trade Republic MFA code: ").strip()
+
+
+async def main() -> None:
+    tr = login(
+        phone_no="+49...",
+        pin="1234",
+        get_mfa_code=ask_mfa,
+    )
+
+    tl = Timeline(tr, store_event_database=False)
+    await tl.tl_loop()
+    await tr.close()
+
+    exporter = TransactionExporter(lang="en")
+    with open("transactions.csv", "w", newline="") as fh:
+        exporter.export(fh, tl.events, format="csv")
+
+
+asyncio.run(main())
+```
+
+The SDK helper `pytr.login()` performs no stdin prompts and never calls
+`sys.exit()` — it raises `ValueError` if it needs an MFA code and you did not
+pass `get_mfa_code`. For low-level access, use `pytr.TradeRepublicApi` directly
+with its async `subscribe()` / `recv()` / `unsubscribe()` / `close()` methods.
+
+`Timeline` accepts an optional `output_path`. When omitted, no directory is
+created and no JSON files are written — events live only on the `tl.events`
+attribute, ready for in-memory processing.
+
 ## Authentication
 
 There are two authentication methods:
