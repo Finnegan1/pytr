@@ -574,7 +574,7 @@ def main():
             print(e)
             return -1
     elif args.version:
-        installed_version = version("pytr")
+        installed_version = version("pytr-sdk")
         print(installed_version)
         check_version(installed_version)
     else:

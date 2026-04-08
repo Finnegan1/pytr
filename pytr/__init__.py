@@ -10,7 +10,7 @@ from pytr.timeline import Timeline
 from pytr.transactions import TransactionExporter
 
 try:
-    __version__ = _pkg_version("pytr")
+    __version__ = _pkg_version("pytr-sdk")
 except PackageNotFoundError:  # local dev install without metadata
     __version__ = "unknown"
 
